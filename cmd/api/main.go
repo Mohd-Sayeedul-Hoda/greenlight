@@ -7,6 +7,11 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"context"
+	"database/sql"
+
+	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
 )
 
 const version = "1.0.0"
@@ -20,6 +25,18 @@ type application struct{
 	config config
 	logger *log.Logger
 }
+
+var _ = godotenv.Load(".env")
+
+var (
+	connectionString = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	      os.Getenv("host"),
+	      os.Getenv("port"),
+	      os.Getenv("user"),
+	      os.Getenv("password"),
+	      os.Getenv("dbname"),
+		)
+)
 
 func main(){
 	var cfg config 
