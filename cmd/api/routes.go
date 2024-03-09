@@ -13,7 +13,7 @@ func (app *application) routes() *httprouter.Router{
 	// adding custom error handler for notfound
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 
-	// adding custom error handler for method not allow
+	// adding custom error handler for method not allew
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
 
 
