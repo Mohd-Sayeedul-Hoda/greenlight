@@ -21,6 +21,9 @@ type config struct{
 	env string
 	db struct{
 		dsn string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime string
 	}
 }
 
@@ -36,7 +39,6 @@ func main(){
 
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
-	flag.Parse()
 
 	cfg.db.dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("host"),
@@ -45,6 +47,11 @@ func main(){
 		os.Getenv("password"),
 		os.Getenv("dbname"),
 	)
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open conncetions")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection time")
+
+	flag.Parse()
 
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
@@ -80,7 +87,20 @@ func openDB(cfg config)(*sql.DB, error){
 	if err != nil{
 		return nil, err
 	}
+	
+	db.SetMaxOpenConns(cfg.db.maxOpenConns)
+	db.SetMaxIdleConns(cfg.db.maxIdleConns)
 
+	duration, err := time.ParseDuration(cfg.db.maxIdleTime)
+	if err != nil{
+		return nil, err
+	}
+
+	db.SetConnMaxIdleTime(duration)
+
+	// we are creating the context when after pining
+	// the db it does not response after 5 sec we
+	// should terminate that connection and return error
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
