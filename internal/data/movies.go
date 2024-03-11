@@ -54,9 +54,10 @@ func(m MovieModel) Insert(movie *Movie) error{
 	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
 	
 
-	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version,)
+	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
+// we are using int64 on uint because error
 func(m MovieModel) Get(id int64) (*Movie, error){
 	if id < 1 {
 		return nil, ErrRecordNotFound
@@ -89,10 +90,42 @@ func(m MovieModel) Get(id int64) (*Movie, error){
 }
 
 func(m MovieModel) Update(movie *Movie) error{
-	return nil
+	query := `UPDATE movies set title = $1, year = 
+		$2, runtime = $3, genres = $4, version = version + 1 WHERE id = $5 RETURNING version`
+
+	args := []any{
+		movie.Title,
+		movie.Year,
+		movie.Runtime,
+		pq.Array(movie.Genres),
+		movie.ID,
+	}
+
+	return m.DB.QueryRow(query, args...).Scan(&movie.Version)
+
 }
 
 func(m MovieModel) Delete(id int64) error{
+
+	if id < 1{
+		return ErrRecordNotFound
+	}
+	query := `DELETE from movies WHERE id = $1`
+
+	result, err := m.DB.Exec(query, id)
+	if err != nil{
+		return nil
+	}
+
+	rowAffected, err := result.RowsAffected()
+	if err != nil{
+		return err
+	}
+
+	if rowAffected == 0{
+		return ErrRecordNotFound
+	}
+
 	return nil
 }
 
