@@ -57,7 +57,16 @@ func(m MovieModel) Insert(movie *Movie) error{
 }
 
 func(m MovieModel) Get(id int64) (*Movie, error){
-	return nil, nil
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	query = `SELECT id, created_at, title, year,
+	runtime, genres, version FROM movies where id 
+	= $1`
+
+	var movie Movie
+
+	err := m.DB.QueryRow()
 }
 
 func(m MovieModel) Update(movie *Movie) error{
