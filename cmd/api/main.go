@@ -9,9 +9,10 @@ import (
 	"time"
 	"context"
 	"database/sql"
+	
+	"greenlight/internal/data"
 
 	_ "github.com/lib/pq"
-	"github.com/joho/godotenv"
 )
 
 const version = "1.0.0"
@@ -30,9 +31,9 @@ type config struct{
 type application struct{
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
-var _ = godotenv.Load(".env")
 
 func main(){
 	var cfg config 
@@ -40,15 +41,10 @@ func main(){
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
 
-	cfg.db.dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("host"),
-		os.Getenv("port"),
-		os.Getenv("user"),
-		os.Getenv("password"),
-		os.Getenv("dbname"),
-	)
-	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open conncetions")
-	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
+
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 15, "PostgreSQL max open conncetions")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 15, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection time")
 
 	flag.Parse()
@@ -66,6 +62,7 @@ func main(){
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
 
 

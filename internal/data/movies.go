@@ -1,9 +1,18 @@
 package data
 
 import (
+	"database/sql"
 	"greenlight/internal/validator"
 	"time"
+
+	"github.com/lib/pq"
 )
+
+type MockMovieModel struct{}
+
+type MovieModel struct{
+	DB *sql.DB
+}
 
 type Movie struct{
 	ID int64 `json:"id"`
@@ -32,4 +41,47 @@ func ValidateMovie(v *validator.Validator, movie *Movie){
 
 	v.Check(validator.Unique(movie.Genres), "genres", "most not contain duplicate values")
 
+}
+
+func(m MovieModel) Insert(movie *Movie) error{
+	query := `
+		INSERT INTO movies (title, year, runtime, genres
+		) VALUES ($1, $2, $3, $4) RETURNING id, created_at, version`
+	
+	// pq array is changing Array go array type into 
+	// psql type array
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+	
+
+	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+}
+
+func(m MovieModel) Get(id int64) (*Movie, error){
+	return nil, nil
+}
+
+func(m MovieModel) Update(movie *Movie) error{
+	return nil
+}
+
+func(m MovieModel) Delete(id int64) error{
+	return nil
+}
+
+// Mock start here
+
+func(m MockMovieModel) Insert(movie *Movie) error{
+	return nil
+}
+
+func(m MockMovieModel) Get(id int64) (*Movie, error){
+	return nil, nil
+}
+
+func(m MockMovieModel) Update(movie *Movie) error{
+	return nil
+}
+
+func(m MockMovieModel) Delete(id int64) error{
+	return nil
 }
