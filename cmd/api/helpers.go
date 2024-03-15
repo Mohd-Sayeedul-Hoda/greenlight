@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"fmt"
 	"io"
 	"strings"
+
+	"greenlight/internal/validator"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -110,4 +113,52 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 		return errors.New("body must only contain a single JSON value")
 	}
 	return nil
+}
+
+// use to return a string if exisits in url parameter if not return some default value
+func (app *application) readStirng(qs url.Values, key string, defaultValue string) string{
+	
+	// get the value of key from map of parameter
+	s := qs.Get(key)
+
+	if s == ""{
+		return defaultValue
+	}
+
+	return s
+
+}
+
+// function use to read and return value of string in parameter like when searching 
+// generes we have more then one to extract that we use it 
+func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string{
+	
+	csv := qs.Get(key)
+
+	if csv == ""{
+		return defaultValue
+	}
+
+	return strings.Split(csv, ",")
+}
+
+
+// so to read int for query parameter if not there return default value if can't convert
+// return error
+func (app *application) readInt(qs url.Values, key string, defaultValue int, v *validator.Validator)int{
+
+	s := qs.Get(key)
+
+	if s == ""{
+		return defaultValue
+	}
+
+	i, err := strconv.Atoi(s)
+	if err != nil{
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+
+	return i
+
 }
