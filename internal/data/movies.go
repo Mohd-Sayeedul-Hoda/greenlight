@@ -162,7 +162,7 @@ func(m MovieModel) Delete(id int64) error{
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error){
 
 	// @> say if contian pq array 
-	query := `SELECT id, created_at, title, year, runtime, genres, version from movies WHERE (LOWER(title) = LOWER($1) or $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY id`
+	query := `SELECT id, created_at, title, year, runtime, genres, version from movies WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
