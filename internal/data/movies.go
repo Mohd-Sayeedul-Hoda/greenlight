@@ -6,6 +6,7 @@ import (
 	"errors"
 	"greenlight/internal/validator"
 	"time"
+	"fmt"
 
 	"github.com/lib/pq"
 )
@@ -162,7 +163,9 @@ func(m MovieModel) Delete(id int64) error{
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error){
 
 	// @> say if contian pq array 
-	query := `SELECT id, created_at, title, year, runtime, genres, version from movies WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY id`
+	// to_tsvector and plainto_tsquery is changing it title of movies and query
+	// into lexmes meaning "The Batman" into "the" "batman" lower and splitting matching it
+	query := fmt.Sprintf(`SELECT id, created_at, title, year, runtime, genres, version from movies WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
