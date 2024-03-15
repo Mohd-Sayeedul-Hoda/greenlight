@@ -161,12 +161,13 @@ func(m MovieModel) Delete(id int64) error{
 
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error){
 
-	query := `SELECT id, created_at, title, year, runtime, genres, version from movies ORDER BY id`
+	// @> say if contian pq array 
+	query := `SELECT id, created_at, title, year, runtime, genres, version from movies WHERE (LOWER(title) = LOWER($1) or $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	rows, err := m.DB.QueryContext(ctx, query)
+	rows, err := m.DB.QueryContext(ctx, query, title, pq.Array(genres))
 	if err != nil{
 		return nil, err
 	}
