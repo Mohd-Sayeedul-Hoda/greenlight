@@ -26,7 +26,7 @@ func (app *application) serve() error{
 		quit := make(chan os.Signal, 1)
 
 		// instructs the go runtime to start sending signals to the specified types
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		s := <-quit
 
 		//Update the log entry to say "shutting down server instead of "caught signal
