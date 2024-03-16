@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"sync"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -25,17 +28,53 @@ func (app *application) recoverPanic(next http.Handler) http.Handler{
 }
 
 func (app *application) rateLimit(next http.Handler)http.Handler{
-	// this is total rate limit means golbally valid for all user
-	// 2 means token bucket fill with 2 request per second
-	// with a maximum of 4 request in a single burst
-	limiter := rate.NewLimiter(2, 4)
 
-	// clousre function 
+	type client struct{
+		limiter *rate.Limiter
+		lastSeen time.Time
+	}
+
+	var (
+		mu sync.Mutex
+		clients = make(map[string]*client)
+	)
+
+	go func(){
+		for{
+			time.Sleep(time.Minute)
+			mu.Lock()
+			for ip, client := range clients{
+				if time.Since(client.lastSeen) > 3*time.Minute{
+				delete(clients, ip)
+				}
+			}
+			mu.Unlock()
+		}
+	}()
+
+	// closure function 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-		if !limiter.Allow(){
+
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil{
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		mu.Lock()
+
+		if _, found := clients[ip]; !found{
+			// 2 is num per second at which bucket will fill and 4 is total no req allow
+			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
+		}
+
+		if !clients[ip].limiter.Allow(){
+			mu.Unlock()
 			app.rateLimitExceededResponse(w, r)
 			return
 		}
+		mu.Unlock()
+
 		next.ServeHTTP(w, r)
 	})
 }
