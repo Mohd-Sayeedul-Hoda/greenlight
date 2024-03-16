@@ -25,6 +25,7 @@ func (app *application) recoverPanic(next http.Handler) http.Handler{
 }
 
 func (app *application) rateLimit(next http.Handler)http.Handler{
+	// this is total rate limit means golbally valid for all user
 	// 2 means token bucket fill with 2 request per second
 	// with a maximum of 4 request in a single burst
 	limiter := rate.NewLimiter(2, 4)
