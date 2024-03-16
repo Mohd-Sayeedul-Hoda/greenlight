@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"flag"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"database/sql"
 	
 	"greenlight/internal/data"
+	"greenlight/internal/jsonlog"
 
 	_ "github.com/lib/pq"
 )
@@ -30,7 +30,7 @@ type config struct{
 
 type application struct{
 	config config
-	logger *log.Logger
+	logger *jsonlog.Logger
 	models data.Models
 }
 
@@ -49,15 +49,15 @@ func main(){
 
 	flag.Parse()
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger :=  jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	db, err := openDB(cfg)
 	if err != nil{
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 
 	defer db.Close()
-	logger.Printf("database connection pool establisted")
+	logger.PrintInfo("database connection pool establisted", nil)
 
 	app := &application{
 		config: cfg,
@@ -74,9 +74,12 @@ func main(){
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger.Printf("Starting %s server on %d", cfg.env, cfg.port)
+	logger.PrintInfo("Starting server", map[string]string{
+		"addr": srv.Addr,
+		"env": cfg.env,
+	})
 	err = srv.ListenAndServe()
-	log.Fatal(err)
+	logger.PrintFatal(err, nil)
 }
 
 func openDB(cfg config)(*sql.DB, error){
