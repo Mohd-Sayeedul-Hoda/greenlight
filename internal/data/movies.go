@@ -160,12 +160,12 @@ func(m MovieModel) Delete(id int64) error{
 	return nil
 }
 
-func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error){
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, MetaData, error){
 
 	// @> say if contian pq array 
 	// to_tsvector and plainto_tsquery is changing it title of movies and query
 	// into lexmes meaning "The Batman" into "the" "batman" lower and splitting matching it
-	query := fmt.Sprintf(`SELECT id, created_at, title, year, runtime, genres, version from movies WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
+	query := fmt.Sprintf(`SELECT COUNT(*) OVER(), id, created_at, title, year, runtime, genres, version from movies WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '') AND (genres @> $2 OR $2 = '{}') ORDER BY %s %s, id ASC LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
@@ -174,11 +174,12 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil{
-		return nil, err
+		return nil, MetaData{}, err
 	}
 
 	defer rows.Close()
 
+	totalRecords := 0
 	movies := []*Movie{}
 
 	for rows.Next(){
@@ -186,6 +187,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		var movie Movie
 
 		err := rows.Scan(
+			&totalRecords,
 			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
@@ -196,15 +198,18 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		)
 
 		if err != nil{
-			return nil, err
+			return nil, MetaData{}, err
 		}
 
 		movies = append(movies, &movie)
 	}
 	if err = rows.Err(); err != nil{
-		return nil, err
+		return nil, MetaData{}, err
 	}
-	return movies, nil
+
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+
+	return movies, metadata, nil
 }
 
 // Mock start here
@@ -225,6 +230,6 @@ func(m MockMovieModel) Delete(id int64) error{
 	return nil
 }
 
-func (m MockMovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error){
-	return nil, nil
+func (m MockMovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, MetaData, error){
+	return nil, MetaData{}, nil
 }

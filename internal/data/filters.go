@@ -2,8 +2,17 @@ package data
 
 import (
 	"greenlight/internal/validator"
+	"math"
 	"strings"
 )
+
+type MetaData struct{
+	CurrentPage int `json:"current_page,omitempty"`
+	PageSize int `json:"page_size,omitempty"`
+	FirstPage int `json:"first_page,omitempty"`
+	LastPage int `json:"last_page,omitempty"`
+	TotalRecords int `json:"total-records,omitempty"`
+}
 
 type Filters struct{
 	Page int
@@ -44,4 +53,18 @@ func (f Filters) limit() int{
 
 func (f Filters) offset() int{
 	return (f.Page-1) * f.PageSize
+}
+
+func calculateMetadata(totalRecords, page, pageSize int) MetaData{
+	if totalRecords == 0 {
+		return MetaData{}
+	}
+
+	return MetaData{
+		CurrentPage: page,
+		PageSize: pageSize,
+		FirstPage: 1, 
+		LastPage: int(math.Ceil(float64(totalRecords)/float64(pageSize))),
+		TotalRecords: totalRecords,
+	}
 }
