@@ -12,7 +12,7 @@ import (
 
 func (app *application) recoverPanic(next http.Handler) http.Handler{
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-	
+
 		defer func(){
 			// builtin recover function to check if there has been a panic or not
 			if err := recover(); err != nil{
@@ -21,10 +21,10 @@ func (app *application) recoverPanic(next http.Handler) http.Handler{
 
 				app.serverErrorResponse(w, r, fmt.Errorf("%s", err))
 			}
-		}()
+			}()
 
 		next.ServeHTTP(w, r)
-	})
+		})
 }
 
 func (app *application) rateLimit(next http.Handler)http.Handler{
@@ -41,39 +41,46 @@ func (app *application) rateLimit(next http.Handler)http.Handler{
 
 	go func(){
 		for{
+			// we are runnig this func every min
 			time.Sleep(time.Minute)
 			mu.Lock()
 			for ip, client := range clients{
 				if time.Since(client.lastSeen) > 3*time.Minute{
-				delete(clients, ip)
+					delete(clients, ip)
 				}
 			}
 			mu.Unlock()
 		}
-	}()
+		}()
 
 	// closure function 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
 
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil{
-			app.serverErrorResponse(w, r, err)
-			return
-		}
+		if app.config.limiter.enabled{
 
-		mu.Lock()
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil{
+				app.serverErrorResponse(w, r, err)
+				return
+			}
 
-		if _, found := clients[ip]; !found{
-			// 2 is num per second at which bucket will fill and 4 is total no req allow
-			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
-		}
+			mu.Lock()
 
-		if !clients[ip].limiter.Allow(){
+			if _, found := clients[ip]; !found{
+				// 2 is num per second at which bucket will fill and 4 is total no req allow
+				clients[ip] = &client{limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
+				}
+			}
+
+			clients[ip].lastSeen = time.Now()
+
+			if !clients[ip].limiter.Allow(){
+				mu.Unlock()
+				app.rateLimitExceededResponse(w, r)
+				return
+			}
 			mu.Unlock()
-			app.rateLimitExceededResponse(w, r)
-			return
 		}
-		mu.Unlock()
 
 		next.ServeHTTP(w, r)
 	})

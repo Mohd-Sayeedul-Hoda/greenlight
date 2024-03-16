@@ -1,14 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"database/sql"
 	"flag"
+	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
-	"context"
-	"database/sql"
-	
+
 	"greenlight/internal/data"
 	"greenlight/internal/jsonlog"
 
@@ -25,6 +26,11 @@ type config struct{
 		maxOpenConns int
 		maxIdleConns int
 		maxIdleTime string
+	}
+	limiter struct{
+		rps float64
+		burst int
+		enabled bool
 	}
 }
 
@@ -46,6 +52,10 @@ func main(){
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 15, "PostgreSQL max open conncetions")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 15, "PostgreSQL max idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection time")
+
+	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum request per second")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 
 	flag.Parse()
 
@@ -69,6 +79,7 @@ func main(){
 	srv := &http.Server{
 		Addr: fmt.Sprintf(":%d", cfg.port),
 		Handler: app.routes(),
+		ErrorLog: log.New(logger, "", 0),
 		IdleTimeout: time.Minute,
 		ReadTimeout: 10 * time.Second,
 		WriteTimeout: 30 * time.Second,
