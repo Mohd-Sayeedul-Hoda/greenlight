@@ -1,6 +1,6 @@
 package data
 
-import(
+import (
 	"context"
 	"database/sql"
 	"errors"
@@ -89,7 +89,7 @@ func ValidateUser(v *validator.Validator, user *User){
 // crud on user
 
 func (m UserModel) Insert(user *User) error{
-	query := `INSERT INTO user (name, email, password_hash, activated) VALUES ($1, $2, $3, $4) RETURNING id, created_at, version`
+	query := `INSERT INTO users (name, email, password_hash, activated) VALUES ($1, $2, $3, $4) RETURNING id, created_at, version`
 
 	args := []any{user.Name, user.Email, user.Password.hash, user.Activated}
 
@@ -99,7 +99,6 @@ func (m UserModel) Insert(user *User) error{
 
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.CreateAt, &user.Version)
 	if err != nil{
-		if err != nil{
 		switch{
 			case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
 				return ErrDuplicateEmail
@@ -107,7 +106,6 @@ func (m UserModel) Insert(user *User) error{
 				return err
 			}
 		}
-	}
 
 	return nil
 	
@@ -156,7 +154,7 @@ func (m UserModel) Update(user *User) error{
 		user.Version,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second))
+	ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
 	defer cancel()
 
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.Version)
@@ -166,4 +164,6 @@ func (m UserModel) Update(user *User) error{
 		return ErrDuplicateEmail
 		}
 	}
+
+	return nil
 }
