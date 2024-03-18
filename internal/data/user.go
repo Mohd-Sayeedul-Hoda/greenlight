@@ -34,7 +34,17 @@ type UserModel struct{
 	DB *sql.DB
 }
 
-// validation on user
+func (p *password) Set(plainTextPassword string) error{
+	hash, err := bcrypt.GenerateFromPassword([]byte(plainTextPassword), 12)
+	if err != nil{
+		return err
+	}
+	p.plaintext = &plainTextPassword
+	p.hash = hash
+	
+	return nil
+}
+
 func (p *password) Matches (plaintextPassword string) (bool, error){
 	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintextPassword))
 	if err != nil{
@@ -49,6 +59,7 @@ func (p *password) Matches (plaintextPassword string) (bool, error){
 	return true, nil
 }
 
+// validation on user
 func ValidateEmail(v *validator.Validator, email string){
 	v.Check(email != "", "email", "must be provided")
 	v.Check(validator.Matches(email, validator.EMailRX), "email", "email must be valid address")
@@ -143,5 +154,16 @@ func (m UserModel) Update(user *User) error{
 		user.Activated,
 		user.ID,
 		user.Version,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second))
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.Version)
+	if err != nil {
+		switch{
+		case err.Error() == `pq: dubplicate key value violates unique constraint "users_email_key"`:
+		return ErrDuplicateEmail
+		}
 	}
 }
