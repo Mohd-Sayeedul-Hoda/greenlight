@@ -87,6 +87,7 @@ func (l *Logger) print(level Level, message string, properties map[string]string
 	// for holding json formate bytes
 	var line []byte
 
+	// here we are changing our struct in json 
 	line, err := json.Marshal(aux)
 	if err != nil{
 		line = []byte(LevelError.String() + ": unabel to marshal log message: "+ err.Error())
