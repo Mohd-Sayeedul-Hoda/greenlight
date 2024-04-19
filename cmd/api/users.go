@@ -52,6 +52,17 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// I was forgetting to send mail to smtp server
+	// using this defer functoin as error recover because when error happen in go routine
+	// then it will panic all the main thread because it not getting handle so we are handling go 
+	// using defer at last
+	app.backgroud(func(){
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil{
+			app.logger.PrintError(err, nil)
+		}
+	})
+
 	err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil{
 		app.serverErrorResponse(w, r, err)

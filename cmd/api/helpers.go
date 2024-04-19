@@ -108,6 +108,8 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 		}
 	}
 
+	// this is used when we apply more user send more json data then expected other data is dump into 
+	// dst struct and if more data then that is give error
 	err = dec.Decode(&struct{}{})
 	if err != io.EOF{
 		return errors.New("body must only contain a single JSON value")
@@ -161,4 +163,18 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 
 	return i
 
+}
+
+// we are using this function for any to execute any go routine function and panic handling if happen in it
+func (app *application) backgroud(fn func()){
+	go func(){
+		defer func(){
+			if err := recover(); err != nil{
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+
+		// Execute the arbitrary functoin that we passend as parameter
+		fn()
+	}()
 }
