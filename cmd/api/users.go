@@ -1,8 +1,9 @@
 package main
 
-import(
+import (
 	"errors"
 	"net/http"
+	"time"
 
 	"greenlight/internal/data"
 	"greenlight/internal/validator"
@@ -52,12 +53,24 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
+	if err != nil{
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	// I was forgetting to send mail to smtp server
 	// using this defer functoin as error recover because when error happen in go routine
 	// then it will panic all the main thread because it not getting handle so we are handling go 
 	// using defer at last
 	app.backgroud(func(){
-		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		data := map[string]any{
+			"activationToken": token.Plaintext,
+			"userID": user.ID,
+		}
+
+
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
 		if err != nil{
 			app.logger.PrintError(err, nil)
 		}
