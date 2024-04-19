@@ -35,8 +35,6 @@ type UserModel struct{
 }
 
 func (p *password) Set(plainTextPassword string) error{
-	//bcrypt is more secure then sha256
-	// but it is slow
 	hash, err := bcrypt.GenerateFromPassword([]byte(plainTextPassword), 12)
 	if err != nil{
 		return err
