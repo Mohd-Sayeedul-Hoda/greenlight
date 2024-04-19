@@ -167,7 +167,14 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 
 // we are using this function for any to execute any go routine function and panic handling if happen in it
 func (app *application) backgroud(fn func()){
+	// Increment the wait group counter
+	app.wg.Add(1)
+
+	// Launch the background goroutine
 	go func(){
+		
+		defer app.wg.Done()
+
 		defer func(){
 			if err := recover(); err != nil{
 				app.logger.PrintError(fmt.Errorf("%s", err), nil)

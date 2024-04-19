@@ -34,13 +34,25 @@ func (app *application) serve() error{
 			"signal": s.String(),
 		})
 
+		// we are giving 20 sec for server to shut down
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
 		// Call Shutdown() on our server, passing in the context we just made
 		// Shutdown() will return nil if err then return error
-		shutdownError <- srv.Shutdown(ctx)
-
+		err := srv.Shutdown(ctx)
+		if err != nil{
+			shutdownError <- err
+		}
+		
+		// logging a message to say that we are waititng for any background task to finished
+		app.logger.PrintInfo("completing background tasks", map[string]string{
+			"addr": srv.Addr,
+		})
+		
+		// call wait to block to wait until out wait group counter is zero
+		app.wg.Wait()
+		shutdownError <- nil
 	}()
 
 	app.logger.PrintInfo("starting server", map[string]string{

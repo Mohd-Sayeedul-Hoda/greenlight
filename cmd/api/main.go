@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"time"
+	"sync"
 
 	"greenlight/internal/data"
 	"greenlight/internal/jsonlog"
@@ -44,6 +45,7 @@ type application struct{
 	logger *jsonlog.Logger
 	models data.Models
 	mailer mailer.Mailer
+	wg sync.WaitGroup
 }
 
 
