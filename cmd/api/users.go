@@ -9,18 +9,6 @@ import (
 	"greenlight/internal/validator"
 )
 
-var AnnonymousUser = &User{}
-
-type User struct{
-	ID int64 `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Name string `json:"name"`
-	Email string `json:"email"`
-	Password password `json:"-"`
-	Activated bool `json:"activated"`
-	Version int `json:"-"`
-}
-
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request){
 	
 	var input struct{

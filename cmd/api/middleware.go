@@ -114,7 +114,7 @@ func (app *application) authenticate(next http.Handler) http.Handler{
 		token := headerParts[1]
 		v := validator.New()
 
-		if data.ValidateTokenPlaintext(v, token); !v.Valid{
+		if data.ValidateTokenPlaintext(v, token); !v.Valid(){
 			app.invalidAuthenticationTokenResponse(w, r)
 			return
 		}
