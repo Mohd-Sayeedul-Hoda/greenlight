@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var AnonymousUser = &User{}
+
 type User struct {
 	ID int64 `json:"id"`
 	CreateAt time.Time `json:"created_at"`
@@ -33,6 +35,10 @@ var(
 
 type UserModel struct{
 	DB *sql.DB
+}
+
+func (u *User) IsAnonymous() bool{
+	return u == AnonymousUser
 }
 
 func (p *password) Set(plainTextPassword string) error{
