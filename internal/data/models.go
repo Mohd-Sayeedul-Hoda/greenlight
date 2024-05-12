@@ -28,5 +28,6 @@ func NewMockModels() Models{
 	return Models{
 		Movies: MovieModel{},
 		Users: UserModel{},
+		Tokens: TokenModel{},
 	}
 }
