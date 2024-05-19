@@ -26,10 +26,10 @@ func (app *application) recoverPanic(next http.Handler) http.Handler{
 
 				app.serverErrorResponse(w, r, fmt.Errorf("%s", err))
 			}
-			}()
+		}()
 
 		next.ServeHTTP(w, r)
-		})
+	})
 }
 
 func (app *application) rateLimit(next http.Handler)http.Handler{
@@ -88,7 +88,7 @@ func (app *application) rateLimit(next http.Handler)http.Handler{
 		}
 
 		next.ServeHTTP(w, r)
-	})
+		})
 }
 
 func (app *application) authenticate(next http.Handler) http.Handler{
@@ -104,7 +104,7 @@ func (app *application) authenticate(next http.Handler) http.Handler{
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		headerParts := strings.Split(authorizationHeader, " ")
 		if len(headerParts) != 2 || headerParts[0] != "Bearer"{
 			app.invalidAuthenticationTokenResponse(w, r)
@@ -129,11 +129,11 @@ func (app *application) authenticate(next http.Handler) http.Handler{
 			}
 			return
 		}
-	
+
 		r = app.contextSetUser(r, user)
 
 		next.ServeHTTP(w, r)
-	})
+		})
 }
 
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc{
@@ -148,7 +148,7 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
+		})
 }
 
 // so we 
@@ -161,7 +161,27 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
+		})
 
 	return app.requireAuthenticatedUser(fn)
+}
+func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc{
+	fn := func(w http.ResponseWriter, r *http.Request){
+		// Retrieve the user from the request context
+		user := app.contextGetUser(r)
+
+		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
+		if err != nil{
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		if !permissions.Include(code){
+			app.notPermittedResponse(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+	return app.requireActivatedUser(fn)
 }
